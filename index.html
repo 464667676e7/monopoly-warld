@@ -158,7 +158,7 @@ RM.on('lobby',m=>{if(HOST||m.isMe||G)return;SL=m.data.sl.map(x=>x&&{n:x[0],tk:x[
 RM.on('snap',m=>{if(!HOST&&!m.isMe)apply(m.data)});
 RM.on('act',m=>{let q=m.data,a=actor();if(!HOST||!G||m.isMe)return;if(q.f=='ac'||q.f=='bid'){let w=q.a[q.f=='ac'?2:0];if(P[w]&&P[w].peer==m.peer)q.f=='ac'?doAc(...q.a):doBid(...q.a);return}if(!P[a]||P[a].type!='remote'||P[a].peer!=m.peer||q.s!=a||!O[q.f])return;O[q.f](...q.a)});
 RM.on('lob',m=>{let q=m.data,i=q.a[0];if(HOST&&!G&&SL[i]&&SL[i].peer==m.peer&&(q.f=='ct'||q.f=='cc')){window[q.f](...q.a)}});return RM}catch(e){LE=(e&&(e.code||e.message))||'error';return 0}}
-setInterval(()=>{if(!RM)return;if(ONL&&HOST)G?sendS():sendL();else if(ONL&&!G)RM.emit('hello',{})},3000);
+setInterval(()=>{if(RM&&ONL&&HOST){if(G)sendS();else sendL()}},250);setInterval(()=>{if(RM&&ONL&&!HOST&&!G)RM.emit('hello',{})},3000);
 const me=()=>({n:NAME,tk:'🎩',col:CL[0],type:'me'}),go=s=>{ST.s=s;menu()};
 function sp(m){ONL=0;HOST=1;ST={s:'lobby',m};SL=[me(),{n:m=='single'?'בוט 1':'אורח 2',tk:'✈️',col:CL[1],type:m=='single'?'bot':'local',lv:2},null,null];menu()}
 function onl(){ST={s:'cj',m:'onl'};menu()}
