@@ -180,7 +180,9 @@ async function conn(c){
       }}
       menu();sendL();
     }else{
-      // Game snapshots arrive instantly through Firebase streaming; REST polling is only for lobby data.
+      // Reliable REST fallback for guest snapshots, including the host's game-start signal.
+      let gameSnap=await fbReq(base+'/snap');
+      if(gameSnap)apply(gameSnap);
       if(!G){
         let lobby=await fbReq(base+'/lobby');
         if(lobby&&Array.isArray(lobby.sl)){SL=lobby.sl.map((x,i)=>x&&({n:x[0],tk:x[1],col:x[2],type:x[3]==='m'?'me':x[3]==='r'?'remote':x[3]==='b'?'bot':'local',peer:x[4],lv:x[5]}));MY=SL.findIndex(x=>x&&x.peer===MP);menu();}
