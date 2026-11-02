@@ -1,0 +1,131 @@
+name: Build Monopoly World AAB
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "index.html"
+      - ".github/workflows/build-aab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: latest
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
+      - name: Prepare Capacitor Android project
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          cat > package.json <<'EOF'
+          {
+            "name": "monopoly-world",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "@capacitor/core": "6.2.1",
+              "@capacitor/android": "6.2.1"
+            },
+            "devDependencies": {
+              "@capacitor/cli": "6.2.1"
+            }
+          }
+          EOF
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.monopolyworld.game",
+            "appName": "Monopoly World",
+            "webDir": "www",
+            "server": { "androidScheme": "https" }
+          }
+          EOF
+          npm install
+          npx cap add android
+          npx cap sync android
+
+      - name: Generate signing key
+        run: |
+          STORE_PASSWORD="$(openssl rand -hex 16)"
+          KEY_PASSWORD="$(openssl rand -hex 16)"
+          keytool -genkeypair -v -keystore "$GITHUB_WORKSPACE/monopoly-world-upload.jks" \
+            -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+            -alias monopolyworld -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Monopoly World, OU=Game, O=Monopoly World, L=Unknown, ST=Unknown, C=IL"
+          echo "STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Configure release signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle")
+          s = p.read_text()
+          s = s.replace(
+              "    buildTypes {",
+              """    signingConfigs {
+                  release {
+                      storeFile file(System.getenv("GITHUB_WORKSPACE") + "/monopoly-world-upload.jks")
+                      storePassword System.getenv("STORE_PASSWORD")
+                      keyAlias "monopolyworld"
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+          
+              buildTypes {""",
+              1
+          )
+          s = s.replace(
+              "        release {",
+              "        release {\n            signingConfig signingConfigs.release",
+              1
+          )
+          p.write_text(s)
+          PY
+
+      - name: Build signed AAB
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+
+      - name: Save signing key and details
+        run: |
+          mkdir -p signing
+          cp monopoly-world-upload.jks signing/
+          cat > signing/KEY-INFO.txt <<EOF
+          App: Monopoly World
+          Package: com.monopolyworld.game
+          Key alias: monopolyworld
+          Keystore password: $STORE_PASSWORD
+          Key password: $KEY_PASSWORD
+          
+          Keep this keystore and these passwords safe. You need the same upload key for future updates.
+          EOF
+          cd signing
+          zip -r ../MonopolyWorld-signing-key.zip .
+
+      - name: Upload AAB and signing key
+        uses: actions/upload-artifact@v4
+        with:
+          name: MonopolyWorld-AAB-and-signing-key
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            MonopolyWorld-signing-key.zip
+          if-no-files-found: error
