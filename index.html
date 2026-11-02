@@ -170,12 +170,12 @@ async function conn(c){
    },close:()=>{stopped=true}};
   const poll=async()=>{if(stopped||!ONL)return;try{
     let room=await fbReq(base);if(!room)throw Error('החדר נסגר');
-    if(HOST){let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};if(d&&d.change){let ch=d.change,cf=ch.f,ca=Array.isArray(ch.a)?ch.a:[];if(i>=0&&ca[0]===i&&['ct','cc'].includes(cf)){if(cf==='ct'&&T4.includes(ca[1]))SL[i].tk=ca[1];if(cf==='cc'&&CL.includes(ca[1]))SL[i].col=ca[1];if(G&&P[i]){if(cf==='ct')P[i].tk=ca[1];if(cf==='cc'){P[i].col=ca[1];PC[i]=ca[1];}}}await fbReq(base+'/players/'+peer+'/change','DELETE');}}
+    if(HOST){let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};if(d&&d.change){let ch=d.change,cf=ch.f,ca=Array.isArray(ch.a)?ch.a:[];if(i>=0&&ca[0]===i&&['ct','cc'].includes(cf)){if(cf==='ct'&&T4.includes(ca[1])){SL[i].tk=ca[1];await fbReq(base+'/players/'+peer+'/tk','PUT',ca[1]);}if(cf==='cc'&&CL.includes(ca[1])){SL[i].col=ca[1];await fbReq(base+'/players/'+peer+'/col','PUT',ca[1]);}if(G&&P[i]){if(cf==='ct')P[i].tk=ca[1];if(cf==='cc'){P[i].col=ca[1];PC[i]=ca[1];}}}await fbReq(base+'/players/'+peer+'/change','DELETE');}}
       for(let i=1;i<SL.length;i++)if(SL[i]?.type==='remote'&&!players[SL[i].peer])SL[i]=null;
       let all=room.messages||{};for(let peer of Object.keys(all)){for(let id of Object.keys(all[peer]||{})){let q=all[peer][id];if(!q)continue;await fbReq(base+'/messages/'+peer+'/'+id,'DELETE');
         // Process guest actions on the host. The REST transport has no event emitter listeners.
         if(q.ev==='act'&&q.data){let a=q.data.s,f=q.data.f,args=Array.isArray(q.data.a)?q.data.a:[];let allowed=['rb','ra','pj','et','bust','mb','act','bid'];
-          if(allowed.includes(f)&&P[a]&&P[a].type==='remote'&&P[a].peer===peer&&actor()===a&&O[f]){try{O[f](...args)}catch(e){LE='שגיאה בביצוע פעולה של שחקן: '+e.message;console.error(e)}}
+          if(allowed.includes(f)&&P[a]&&P[a].type==='remote'&&P[a].peer===peer&&((f==='bid'&&AU&&args[0]===a)||actor()===a)&&O[f]){try{O[f](...args)}catch(e){LE='שגיאה בביצוע פעולה של שחקן: '+e.message;console.error(e)}}
         }
       }}
       menu();sendL();
