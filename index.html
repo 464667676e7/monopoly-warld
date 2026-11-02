@@ -163,14 +163,14 @@ async function conn(c){
   if(HOST){SL[0].peer=MP;await fbReq(base,'PUT',{createdAt:Date.now(),host:MP,status:'lobby',players:{[MP]:{n:NAME,tk:SL[0].tk,col:SL[0].col,type:'me',peer:MP}}});}
   else {let room=await fbReq(base);if(!room||!room.host)throw Error('החדר לא נמצא. בדוק את הקוד.');
     await fbReq(base+'/players/'+MP,'PUT',{n:NAME,tk:T4.find(x=>x!==SL[0]?.tk)||T4[1],col:CL.find(x=>x!==SL[0]?.col)||CL[1],type:'remote',peer:MP,joinedAt:Date.now()});}
-  RM={on:(ev,fn)=>{(handlers[ev]||(handlers[ev]=[])).push(fn)},emit:(ev,data)=>{
+  let snapStream=null;RM={on:(ev,fn)=>{(handlers[ev]||(handlers[ev]=[])).push(fn)},emit:(ev,data)=>{
     if(HOST&&(ev==='snap'||ev==='lobby')){fbReq(base+'/'+ev,'PUT',data).catch(e=>{LE=e.message});return}
     if(!HOST&&ev==='lob'){fbReq(base+'/players/'+MP+'/change','PUT',data).catch(e=>{LE=e.message});return}
     if(!HOST&&ev==='act'){let id='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);fbReq(base+'/messages/'+MP+'/'+id,'PUT',{ev,data,at:Date.now()}).catch(e=>{LE=e.message})}
-   },close:()=>{stopped=true}};
+   },close:()=>{stopped=true;if(snapStream){snapStream.close();snapStream=null}}};
+  if(!HOST){snapStream=new EventSource(FB_DB+'/'+base+'/snap.json');const onSnap=e=>{try{let msg=JSON.parse(e.data);if(msg&&msg.data){try{apply(msg.data)}catch(err){LE='שגיאה בקבלת מצב המשחק: '+err.message;console.error(err)}}}catch(err){console.error(err)}};snapStream.addEventListener('put',onSnap);snapStream.addEventListener('patch',onSnap);snapStream.addEventListener('cancel',()=>{LE='חיבור הסנכרון נותק'});}
   const poll=async()=>{if(stopped||!ONL)return;try{
-    let room=await fbReq(base);if(!room)throw Error('החדר נסגר');
-    if(HOST){let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};if(d&&d.change){let ch=d.change,cf=ch.f,ca=Array.isArray(ch.a)?ch.a:[];if(i>=0&&ca[0]===i&&['ct','cc'].includes(cf)){if(cf==='ct'&&T4.includes(ca[1])){SL[i].tk=ca[1];await fbReq(base+'/players/'+peer+'/tk','PUT',ca[1]);}if(cf==='cc'&&CL.includes(ca[1])){SL[i].col=ca[1];await fbReq(base+'/players/'+peer+'/col','PUT',ca[1]);}if(G&&P[i]){if(cf==='ct')P[i].tk=ca[1];if(cf==='cc'){P[i].col=ca[1];PC[i]=ca[1];}}}await fbReq(base+'/players/'+peer+'/change','DELETE');}}
+    if(HOST){let room=await fbReq(base);if(!room)throw Error('החדר נסגר');let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};if(d&&d.change){let ch=d.change,cf=ch.f,ca=Array.isArray(ch.a)?ch.a:[];if(i>=0&&ca[0]===i&&['ct','cc'].includes(cf)){if(cf==='ct'&&T4.includes(ca[1])){SL[i].tk=ca[1];await fbReq(base+'/players/'+peer+'/tk','PUT',ca[1]);}if(cf==='cc'&&CL.includes(ca[1])){SL[i].col=ca[1];await fbReq(base+'/players/'+peer+'/col','PUT',ca[1]);}if(G&&P[i]){if(cf==='ct')P[i].tk=ca[1];if(cf==='cc'){P[i].col=ca[1];PC[i]=ca[1];}}}await fbReq(base+'/players/'+peer+'/change','DELETE');}}
       for(let i=1;i<SL.length;i++)if(SL[i]?.type==='remote'&&!players[SL[i].peer])SL[i]=null;
       let all=room.messages||{};for(let peer of Object.keys(all)){for(let id of Object.keys(all[peer]||{})){let q=all[peer][id];if(!q)continue;await fbReq(base+'/messages/'+peer+'/'+id,'DELETE');
         // Process guest actions on the host. The REST transport has no event emitter listeners.
@@ -180,11 +180,8 @@ async function conn(c){
       }}
       menu();sendL();
     }else{
-      // Guest fetches only the data needed for the current screen, not the entire room.
-      if(G){
-        let gameSnap=await fbReq(base+'/snap');
-        if(gameSnap){try{apply(gameSnap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
-      }else{
+      // Game snapshots arrive instantly through Firebase streaming; REST polling is only for lobby data.
+      if(!G){
         let lobby=await fbReq(base+'/lobby');
         if(lobby&&Array.isArray(lobby.sl)){SL=lobby.sl.map((x,i)=>x&&({n:x[0],tk:x[1],col:x[2],type:x[3]==='m'?'me':x[3]==='r'?'remote':x[3]==='b'?'bot':'local',peer:x[4],lv:x[5]}));MY=SL.findIndex(x=>x&&x.peer===MP);menu();}
       }
