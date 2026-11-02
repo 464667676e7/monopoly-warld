@@ -9,6 +9,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Heebo,Arial,sans
 h1,h2{font-family:'Secular One',Heebo,sans-serif;margin:.2em 0}
 #wr{position:relative;width:min(98vw,88vh,860px);aspect-ratio:1;margin:6px auto}#fy{display:none;position:absolute;z-index:5;font-size:min(5.5vw,38px);transform:translate(-50%,-50%);transition:left .3s linear,top .3s linear;pointer-events:none;filter:drop-shadow(0 4px 3px #0009)}#bd{direction:ltr;display:grid;grid-template:1.5fr repeat(9,1fr) 1.5fr/1.5fr repeat(9,1fr) 1.5fr;width:100%;height:100%;border:3px solid var(--bd);background:var(--mid)}
 .s{direction:rtl;border:1px solid var(--bd);background:var(--card);display:flex;flex-direction:column;text-align:center;overflow:hidden;font-size:clamp(5px,1.3vw,11px);line-height:1.05}
+.s{position:relative}.owner-mark{position:absolute;z-index:2;pointer-events:none;background:var(--owner);}.owner-mark.top{left:0;right:0;top:0;height:5px}.owner-mark.bottom{left:0;right:0;bottom:0;height:5px}.owner-mark.left{top:0;bottom:0;left:0;width:5px}.owner-mark.right{top:0;bottom:0;right:0;width:5px}
 .s i{display:block;min-height:5px;font-style:normal;font-size:.9em}.s b{flex:1;display:flex;align-items:center;justify-content:center;padding:1px}.s u{text-decoration:none;opacity:.7}.s em{font-style:normal;font-size:1.7em;min-height:1.2em}
 #ct{grid-area:2/2/11/11;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2vmin;padding:2vmin;text-align:center;font-size:clamp(9px,2vmin,17px)}
 #ct h1{font-size:4.5vmin;letter-spacing:.04em}
@@ -152,24 +153,54 @@ function apply(s){MY=s.meta.findIndex(m=>m[4]&&m[4]==MP);P=s.meta.map((m,i)=>({.
 if(s.rn!=RN){RN=s.rn;d=s.d;roll(d)}else if(!s.bz){d=s.d;paint(d)}
 if(!(M&&M.loc))M=s.md?{h:s.md.h,w:s.md.w,b:s.md.b.map(x=>[x[0],()=>{},x[1]])}:null;
 if(!G){G=1;ST=null}render()}
-async function conn(c){try{let r=await claude.use('room');if(!r){LE='not admitted';return 0}RM=await r.join('mw'+c);
-RM.on('hello',m=>{if(m.isMe){if(m.sameTab)MP=m.peer;return}if(!HOST)return;let i=SL.findIndex(x=>x&&x.peer==m.peer);if(i<0&&!G){i=SL.findIndex((x,k)=>k<4&&!x);if(i<0&&SL.length<4)i=SL.length;if(i>=0)SL[i]={n:'חבר '+i,tk:T4.find(t=>!SL.some(x=>x&&x.tk==t)),col:CL.find(t=>!SL.some(x=>x&&x.col==t)),type:'remote',peer:m.peer}}G?sendS():(sendL(),menu())});
-RM.on('lobby',m=>{if(HOST||m.isMe||G)return;SL=m.data.sl.map(x=>x&&{n:x[0],tk:x[1],col:x[2],type:x[3]=='m'?'me':x[3]=='r'?'remote':x[3]=='b'?'bot':'local',peer:x[4],lv:x[5]});MY=SL.findIndex(x=>x&&x.peer==MP);menu()});
-RM.on('snap',m=>{if(!HOST&&!m.isMe)apply(m.data)});
-RM.on('act',m=>{let q=m.data,a=actor();if(!HOST||!G||m.isMe)return;if(q.f=='ac'||q.f=='bid'){let w=q.a[q.f=='ac'?2:0];if(P[w]&&P[w].peer==m.peer)q.f=='ac'?doAc(...q.a):doBid(...q.a);return}if(!P[a]||P[a].type!='remote'||P[a].peer!=m.peer||q.s!=a||!O[q.f])return;O[q.f](...q.a)});
-RM.on('lob',m=>{let q=m.data,i=q.a[0];if(HOST&&!G&&SL[i]&&SL[i].peer==m.peer&&(q.f=='ct'||q.f=='cc')){window[q.f](...q.a)}});return RM}catch(e){LE=(e&&(e.code||e.message))||'error';return 0}}
+const FB_DB='https://monopoly-world-f758d-default-rtdb.europe-west1.firebasedatabase.app';
+const peerId=()=>{let k='mw_peer_id';let v='';try{v=localStorage.getItem(k)||'';if(!v){v='p'+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem(k,v)}}catch(e){v='p'+Math.random().toString(36).slice(2)+Date.now().toString(36)}return v};
+async function fbReq(path,method='GET',body){let r=await fetch(FB_DB+'/'+path+'.json',{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let t=await r.text();if(!r.ok)throw Error('Firebase '+r.status+': '+t);return t?JSON.parse(t):null}
+async function conn(c){
+ try{
+  MP=peerId(); const base='rooms/mw'+c; const handlers={}; let stopped=false;
+  const dispatch=(ev,m)=>{(handlers[ev]||[]).forEach(fn=>{try{fn(m)}catch(e){console.error(e)}})};
+  if(HOST){SL[0].peer=MP;await fbReq(base,'PUT',{createdAt:Date.now(),host:MP,status:'lobby',players:{[MP]:{n:NAME,tk:SL[0].tk,col:SL[0].col,type:'me',peer:MP}}});}
+  else {let room=await fbReq(base);if(!room||!room.host)throw Error('החדר לא נמצא. בדוק את הקוד.');
+    await fbReq(base+'/players/'+MP,'PUT',{n:NAME,tk:T4.find(x=>x!==SL[0]?.tk)||T4[1],col:CL.find(x=>x!==SL[0]?.col)||CL[1],type:'remote',peer:MP,joinedAt:Date.now()});}
+  RM={on:(ev,fn)=>{(handlers[ev]||(handlers[ev]=[])).push(fn)},emit:(ev,data)=>{
+    if(HOST&&(ev==='snap'||ev==='lobby')){fbReq(base+'/'+ev,'PUT',data).catch(e=>{LE=e.message});return}
+    if(!HOST&&ev==='lob'){fbReq(base+'/players/'+MP+'/change','PUT',data).catch(e=>{LE=e.message});return}
+    if(!HOST&&ev==='act'){let id='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);fbReq(base+'/messages/'+MP+'/'+id,'PUT',{ev,data,at:Date.now()}).catch(e=>{LE=e.message})}
+   },close:()=>{stopped=true}};
+  const poll=async()=>{if(stopped||!ONL)return;try{
+    let room=await fbReq(base);if(!room)throw Error('החדר נסגר');
+    if(HOST){let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};}
+      for(let i=1;i<SL.length;i++)if(SL[i]?.type==='remote'&&!players[SL[i].peer])SL[i]=null;
+      let all=room.messages||{};for(let peer of Object.keys(all)){for(let id of Object.keys(all[peer]||{})){let q=all[peer][id];if(!q)continue;await fbReq(base+'/messages/'+peer+'/'+id,'DELETE');
+        // Process guest actions on the host. The REST transport has no event emitter listeners.
+        if(q.ev==='act'&&q.data){let a=q.data.s,f=q.data.f,args=Array.isArray(q.data.a)?q.data.a:[];let allowed=['rb','ra','pj','et','bust','mb','act'];
+          if(allowed.includes(f)&&P[a]&&P[a].type==='remote'&&P[a].peer===peer&&actor()===a&&O[f]){try{O[f](...args)}catch(e){LE='שגיאה בביצוע פעולה של שחקן: '+e.message;console.error(e)}}
+        }
+      }}
+      menu();sendL();
+    }else{
+      if(room.lobby&&Array.isArray(room.lobby.sl)){SL=room.lobby.sl.map((x,i)=>x&&({n:x[0],tk:x[1],col:x[2],type:x[3]==='m'?'me':x[3]==='r'?'remote':x[3]==='b'?'bot':'local',peer:x[4],lv:x[5]}));MY=SL.findIndex(x=>x&&x.peer===MP);menu();}
+      if(room.snap){try{apply(room.snap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
+    }
+   }catch(e){LE=e.message;}
+   if(!stopped&&ONL)setTimeout(poll,900);
+  };
+  setTimeout(poll,250);return RM;
+ }catch(e){LE=(e&&e.message)||'שגיאת חיבור';return 0}
+}
 setInterval(()=>{if(!RM)return;if(ONL&&HOST)G?sendS():sendL();else if(ONL&&!G)RM.emit('hello',{})},3000);
 const me=()=>({n:NAME,tk:'🎩',col:CL[0],type:'me'}),go=s=>{ST.s=s;menu()};
-function sp(m){ONL=0;HOST=1;ST={s:'lobby',m};SL=[me(),{n:m=='single'?'בוט 1':'אורח 2',tk:'✈️',col:CL[1],type:m=='single'?'bot':'local',lv:2},null,null];menu()}
+function sp(m){ONL=0;HOST=1;ST={s:'lobby',m};SL=m==='single'?[me(),{n:'בוט 1',tk:'✈️',col:CL[1],type:'bot',lv:2},{n:'בוט 2',tk:'🚗',col:CL[2],type:'bot',lv:2},{n:'בוט 3',tk:'🚢',col:CL[3],type:'bot',lv:2}]:[me(),{n:'אורח 2',tk:'✈️',col:CL[1],type:'local'},null,null];menu()}
 function onl(){ST={s:'cj',m:'onl'};menu()}
-async function mk(){let c=String(10000+Math.random()*89999|0);ONL=1;HOST=1;ST={s:'lobby',m:'onl',code:c};SL=[me(),null,null,null];menu();if(!await conn(c)){ONL=0;ST={s:'cj',err:'Online rooms only work when this page is opened inside Claude while signed in to Claude (not from a public or browser link). '+LE};menu()}}
-async function jn(){let c=$('#jc').value.trim();if(c.length!=5)return;ONL=1;HOST=0;ST={s:'lobby',m:'onl',code:c};SL=[];menu();if(!await conn(c)){ONL=0;HOST=1;ST={s:'cj',err:'Could not connect to the room. '+LE};menu();return}RM.emit('hello',{})}
+async function mk(){let c=String(10000+Math.random()*89999|0);ONL=1;HOST=1;ST={s:'lobby',m:'onl',code:c};SL=[me(),null,null,null];menu();if(!await conn(c)){ONL=0;ST={s:'cj',err:'לא ניתן ליצור חדר: '+LE};menu()}}
+async function jn(){let c=$('#jc').value.trim();if(c.length!=5)return;ONL=1;HOST=0;ST={s:'lobby',m:'onl',code:c};SL=[];menu();if(!await conn(c)){ONL=0;HOST=1;ST={s:'cj',err:'לא ניתן להתחבר לחדר: '+LE};menu();return}RM.emit('hello',{})}
 function ad(i,t){SL[i]={n:t=='bot'?'בוט '+i:'אורח '+(i+1),tk:T4.find(x=>!SL.some(s=>s&&s.tk==x)),col:CL.find(x=>!SL.some(s=>s&&s.col==x)),type:t,lv:2};menu()}
 function ct(i){let n=T4[(T4.indexOf(SL[i].tk)+1)%T4.length];while(SL.some(s=>s&&s!=SL[i]&&s.tk==n))n=T4[(T4.indexOf(n)+1)%T4.length];SL[i].tk=n;menu()}
 function cc(i,c){if(!SL.some(s=>s&&s!=SL[i]&&s.col==c))SL[i].col=c;menu()}
 ['ct','cc'].forEach(f=>{let o=window[f];window[f]=(...a)=>{if(ONL&&!HOST){if(a[0]==MY)RM.emit('lob',{f,a})}else o(...a)}});
 const lv=i=>{SL[i].lv=SL[i].lv%3+1;menu()},rmv=i=>{SL[i]=null;menu()};
-function st(){let L=SL.filter(Boolean);if(L.length<2)return;P=L.map(x=>({...x,m:2500,pos:0,j:0,jt:0,out:0,cr:-1}));P.forEach((q,i)=>PC[i]=q.col);cur=0;rolled=0;dbl=0;LOG=['המשחק התחיל! בהצלחה ✈️'];G=1;ST=null;paint([1,1]);render()}
+function st(){let L=SL.filter(Boolean);if(L.length<2)return;P=L.map(x=>({...x,m:2500,pos:0,j:0,jt:0,out:0,cr:-1}));P.forEach((q,i)=>PC[i]=q.col);cur=0;rolled=0;dbl=0;LOG=['המשחק התחיל! בהצלחה ✈️'];G=1;ST=null;paint([1,1]);render();if(ONL&&HOST&&RM)sendS()}
 function slot(i){let x=SL[i];if(!x)return`<div class=sl>${HOST?`<button onclick="ad(${i},'local')">הוסף אורח</button><button onclick="ad(${i},'bot')">הוסף בוט</button>`:'ממתין...'}</div>`;
 let ed=(i==0&&HOST)||x.type=='local';return`<div class=sl style="border-color:${x.col}"><div class=tb2 onclick="ct(${i})">${tkv(x)}</div><input value="${x.n}" ${ed?`onchange="SL[${i}].n=this.value;NAME=SL[0].n"`:'disabled'}>${x.type=='bot'&&HOST?`<button onclick="lv(${i})">רמה: ${['','קל','בינוני','קשה'][x.lv]}</button>`:''}<div class=cs>${CL.map(c=>`<b style="background:${c}" onclick="cc(${i},'${c}')"></b>`).join('')}</div>${i&&HOST?`<button onclick="rmv(${i})">הסר</button>`:''}</div>`}
 function menu(){let m=$('#menu');m.style.display=ST?'flex':'none';if(!ST)return;let s=ST.s,h='',bk=t=>`<button class=bk onclick="go('${t}')">↩</button>`;
@@ -249,7 +280,7 @@ if(!rolled){p.j?B.push(['שלם 50 ₪ והשתחרר','pj()'],[`נסה דאבל
 B.push(['🏦 '+t('mort'),"sm('m')",0,MODE=='m'],['🏠 '+t('build'),"sm('b')",!mi||busy,MODE=='b'],['🔨 '+t('sell'),"sm('s')",!mi||busy,MODE=='s']);if(!gu)B.push([t('trade'),'trd()'],[t('finish'),'fin()']);
 $('#bt').innerHTML=B.map(([l,f,x,on])=>`<button class="${on?'on':''}" onclick="${f}" ${(x||(!mi&&f.indexOf('sm(')<0)||(busy&&f.indexOf('sm(')<0))?'disabled':''}>${l}</button>`).join('');
 $('#bd').innerHTML=S.map(s=>{let[r,c]=ps(s.i),tk=P.filter(q=>!q.out&&q!=MV&&q.pos==s.i).map(badge).join(''),o=MODE?ovl(s,me):null,hs=s.t=='R'&&s.h?(s.h>4?'<span class="ho ht"></span>':'<span class="ho"></span>'.repeat(s.h)):'';
-return`<div class="s ${SD(s.i)} ${MODE&&!o?'dm':''}" onclick="cl(${s.i})" style="grid-area:${r}/${c};${s.o>=0?`box-shadow:inset 0 -5px 0 ${PC[s.o]};`:''}${s.m?'opacity:.55':''}">${s.t=='R'?`<i style="background:${s.col};color:#fff;text-shadow:0 0 2px #000,0 0 2px #000;font-weight:700">${s.c}</i>`:''}<b>${s.n}${s.t=='P'?' 💰'+POT:''}${s.m?' 🔒':''}</b>${s.pr?`<u>${s.pr}₪</u>`:''}${hs?`<span class="hr">${hs}</span>`:''}<em>${tk}</em>${o?`<div class="ov ${o[1]}">${o[0]}</div>`:''}</div>`}).join('')+`<div id="ct">${CITY}</div>`;
+let edge=r===1?'bottom':r===11?'top':c===1?'right':c===11?'left':'bottom';return`<div class="s ${SD(s.i)} ${MODE&&!o?'dm':''}" onclick="cl(${s.i})" style="grid-area:${r}/${c};${s.o>=0?`--owner:${PC[s.o]};`:''}${s.m?'opacity:.55':''}">${s.o>=0?`<span class="owner-mark ${edge}"></span>`:''}${s.t=='R'?`<i style="background:${s.col};color:#fff;text-shadow:0 0 2px #000,0 0 2px #000;font-weight:700">${s.c}</i>`:''}<b>${s.n}${s.t=='P'?' 💰'+POT:''}${s.m?' 🔒':''}</b>${s.pr?`<u>${s.pr}₪</u>`:''}${hs?`<span class="hr">${hs}</span>`:''}<em>${tk}</em>${o?`<div class="ov ${o[1]}">${o[0]}</div>`:''}</div>`}).join('')+`<div id="ct">${CITY}</div>`;
 $('#pl').innerHTML=P.map((q,i)=>{let d=DL[i]&&DL[i].t>T?DL[i]:0;return`<div class="pc ${i==cur?'on':''}" style="border-color:${q.col};${q.out?'opacity:.4':''}"><div>${badge(q)} <b>${q.n}${q.type=='bot'?' 🤖':''}</b></div><div class="mn">${q.m<0?`<span style="color:#d00">חוב ₪${-q.m}</span>`:'₪'+q.m}${d?`<span class="dl ${d.d>0?'up':'dn'}">${d.d>0?'+':''}${d.d}</span>`:''}</div><div>${S.filter(s=>s.o==i).map(s=>`<i title="${s.n}" style="background:${s.col||'#888'}"></i>`).join('')}</div></div>`}).join('');
 $('#lg').innerHTML=LOG.slice(-2).reverse().join('<br>');$('#rt').innerHTML=RT?'✈️ '+RT:'';$('#rt').style.display=RT?'block':'none';
 if(!$('#au'))document.body.insertAdjacentHTML('beforeend','<div id="au"></div>');$('#au').innerHTML=AU?auH():'';
@@ -317,3 +348,4 @@ button.on{outline:3px solid #fff;background:#12263f}
 .cardm{border:3px solid #12263f;border-radius:12px;background:#fff;color:#111;overflow:hidden;text-align:center;font-size:14px}.cardm .ch{padding:6px;font-weight:700;color:#fff;font-size:16px}.cardm.q .ch{background:linear-gradient(#ff9a1f,#e56b00)}.cardm.e .ch{background:linear-gradient(#2d9be0,#1565b5)}.cardm .cb2{padding:14px 10px;min-height:70px;display:flex;align-items:center;justify-content:center}
 </style>
 </body></html>
+
