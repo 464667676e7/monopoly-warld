@@ -174,8 +174,8 @@ async function conn(c){
       for(let i=1;i<SL.length;i++)if(SL[i]?.type==='remote'&&!players[SL[i].peer])SL[i]=null;
       let all=room.messages||{};for(let peer of Object.keys(all)){for(let id of Object.keys(all[peer]||{})){let q=all[peer][id];if(!q)continue;await fbReq(base+'/messages/'+peer+'/'+id,'DELETE');
         // Process guest actions on the host. The REST transport has no event emitter listeners.
-        if(q.ev==='act'&&q.data){let a=q.data.s,f=q.data.f,args=Array.isArray(q.data.a)?q.data.a:[];let allowed=['rb','ra','pj','et','bust','mb','act'];
-          if(allowed.includes(f)&&P[a]&&P[a].type==='remote'&&P[a].peer===peer&&actor()===a&&O[f]){try{O[f](...args)}catch(e){LE='שגיאה בביצוע פעולה של שחקן: '+e.message;console.error(e)}}
+        if(q.ev==='act'&&q.data){let a=q.data.s,f=q.data.f,args=Array.isArray(q.data.a)?q.data.a:[];let allowed=['rb','ra','pj','et','bust','mb','act','bid'];
+          if(allowed.includes(f)&&P[a]&&P[a].type==='remote'&&P[a].peer===peer&&((f==='bid'&&args[0]===a)||actor()===a)&&O[f]){try{O[f](...args)}catch(e){LE='שגיאה בביצוע פעולה של שחקן: '+e.message;console.error(e)}}
         }
       }}
       menu();sendL();
@@ -184,12 +184,12 @@ async function conn(c){
       if(room.snap){try{apply(room.snap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
     }
    }catch(e){LE=e.message;}
-   if(!stopped&&ONL)setTimeout(poll,300);
+   if(!stopped&&ONL)setTimeout(poll,160);
   };
   setTimeout(poll,250);return RM;
  }catch(e){LE=(e&&e.message)||'שגיאת חיבור';return 0}
 }
-setInterval(()=>{if(!RM)return;if(ONL&&HOST)G?sendS():sendL();else if(ONL&&!G)RM.emit('hello',{})},300);
+setInterval(()=>{if(!RM)return;if(ONL&&HOST)G?sendS():sendL();else if(ONL&&!G)RM.emit('hello',{})},160);
 const me=()=>({n:NAME,tk:'🎩',col:CL[0],type:'me'}),go=s=>{ST.s=s;menu()};
 function sp(m){ONL=0;HOST=1;ST={s:'lobby',m};SL=m==='single'?[me(),{n:'בוט 1',tk:'✈️',col:CL[1],type:'bot',lv:2},{n:'בוט 2',tk:'🚗',col:CL[2],type:'bot',lv:2},{n:'בוט 3',tk:'🚢',col:CL[3],type:'bot',lv:2}]:[me(),{n:'אורח 2',tk:'✈️',col:CL[1],type:'local'},null,null];menu()}
 function onl(){ST={s:'cj',m:'onl'};menu()}
@@ -248,10 +248,10 @@ function btr(a,L){if(!TR)return 0;let q=P[a],v=(l,own)=>l.reduce((s0,i)=>{let s=
 function doAc(k,i,w){let s=S[i],p=P[w];if(!s||!p||s.o!=w)return;if(k=='b'){if(w!=cur||!canB(s,w))return;s.h++;p.m-=s.hc;log(`${p.n} בנה ב${s.n}`)}else if(k=='s'){if(w!=cur||!canS(s,w))return;s.h--;p.m+=s.hc/2;log(`${p.n} מכר בית ב${s.n}`)}else{if(s.m){let c=Math.round(s.pr*.55);if(p.m<c)return log('אין מספיק כסף לפדיון');s.m=0;p.m-=c;log(`${p.n} פדה את ${s.n}`)}else{if(grp(s).some(x=>x.h))return log('קודם מכור את הבתים במדינה');s.m=1;p.m+=s.pr/2;log(`${p.n} משכן את ${s.n} (+${s.pr/2})`)}}render()}
 function ac(k,i,w){if(ONL&&!HOST)return RM.emit('act',{f:'ac',a:[k,i,w],s:MY});doAc(k,i,w)}
 function doBid(w,x){if(!AU||!P[w]||P[w].out)return;let n=AU.hi+x;if(n>P[w].m)return log('אין מספיק כסף – אפשר למשכן נכסים');AU.hi=n;AU.hb=w;AU.t=3;log(`${P[w].n} הציע ₪${n}`);render()}
-function bid(w,x){if(ONL&&!HOST)return RM.emit('act',{f:'bid',a:[w,x],s:MY});doBid(w,x)}
+function bid(w,x){if(ONL&&!HOST){if(w!==MY)return;return RM.emit('act',{f:'bid',a:[w,x],s:MY})}doBid(w,x)}
 function auc(s){if(AU)return;AU={s,n:s.n,pr:s.pr,hi:0,hb:-1,t:6};AU.iv=setInterval(auT,1000);render()}
 function auT(){let a=AU;if(!a)return;P.forEach((q,i)=>{if(q.type!='bot'||q.out||a.hb==i)return;let L=q.lv||2,v=a.pr*[0,.7,.95,1.2][L],inc=v-a.hi>150?50:10;if(a.hi+inc<=v&&q.m>=a.hi+inc+(L>1?80:0)&&Math.random()<[0,.35,.5,.65][L]){a.hi+=inc;a.hb=i;a.t=4;log(`${q.n} הציע ₪${a.hi}`)}});if(--a.t<=0){clearInterval(a.iv);AU=null;let s=a.s;if(a.hb>=0){P[a.hb].m-=a.hi;s.o=a.hb;info(`🔨 נמכר! ${P[a.hb].n} קנה את ${s.n} ב-₪${a.hi}`)}else info(s.n+' לא נמכר')}else render()}
-const auH=()=>{let a=AU,ms=ONL&&!HOST?[MY]:P.map((q,i)=>i).filter(i=>!P[i].out&&(P[i].type=='me'||P[i].type=='local')),w=['נמכר!','אחת…','שתיים…','שלוש…'][a.t]||a.t;return`<div class="mc" style="text-align:center"><h2>🔨 מכרז: ${a.n}</h2>מחיר ₪${a.pr} · הצעה: <b>₪${a.hi}</b> ${a.hb>=0?'· '+P[a.hb].n:''}<div class="cnt">${w}</div>${ms.map(i=>`<div>${ms.length>1?P[i].n+': ':''}${[10,50,100].map(x=>`<button onclick="bid(${i},${x})" ${P[i].m<a.hi+x?'disabled':''}>+${x}</button>`).join('')}</div>`).join('')}<small>חסר כסף? לחץ על משכון ובחר נכס בלוח</small></div>`};
+const auH=()=>{let a=AU,ms=ONL&&!HOST?[MY]:P.map((q,i)=>i).filter(i=>!P[i].out&&(P[i].type=='me'||P[i].type=='local'||(ONL&&HOST&&P[i].type=='remote'&&P[i].peer))),w=['נמכר!','אחת…','שתיים…','שלוש…'][a.t]||a.t;return`<div class="mc" style="text-align:center"><h2>🔨 מכרז: ${a.n}</h2>מחיר ₪${a.pr} · הצעה: <b>₪${a.hi}</b> ${a.hb>=0?'· '+P[a.hb].n:''}<div class="cnt">${w}</div>${ms.map(i=>`<div>${ms.length>1?P[i].n+': ':''}${[10,50,100].map(x=>`<button onclick="bid(${i},${x})" ${P[i].m<a.hi+x?'disabled':''}>+${x}</button>`).join('')}</div>`).join('')}<small>חסר כסף? לחץ על משכון ובחר נכס בלוח</small></div>`};
 function deed(i){let s=S[i];if(!'RFU'.includes(s.t))return;let rw=(a,b)=>`<div class="dr"><span>${a}</span><b>${b}</b></div>`,h='';
 if(s.t=='R'){let r=s.r;h=rw('שכירות','₪'+r)+rw('סט מלא (ללא בתים)','₪'+r*2)+[1,2,3,4].map(k=>rw(k+(k>1?' בתים':' בית'),'₪'+r*[0,5,15,45,80][k])).join('')+rw('מלון','₪'+r*125)+'<hr>'+rw('עלות בית','₪'+s.hc)+rw('עלות מלון','₪'+s.hc+' + 4 בתים')}
 else if(s.t=='F')h=[1,2,3,4].map(k=>rw(k+(k>1?' טיסות':' טיסה')+' בבעלותך','₪'+s.pr/8*2**(k-1))).join('');else h=rw('שכירות','8× הקוביות')+rw('שני שירותים','20× הקוביות');
