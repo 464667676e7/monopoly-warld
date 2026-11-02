@@ -185,8 +185,15 @@ async function conn(c){
         let gameSnap=await fbReq(base+'/snap');
         if(gameSnap){try{apply(gameSnap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
       }else{
-        let lobby=await fbReq(base+'/lobby');
-        if(lobby&&Array.isArray(lobby.sl)){SL=lobby.sl.map((x,i)=>x&&({n:x[0],tk:x[1],col:x[2],type:x[3]==='m'?'me':x[3]==='r'?'remote':x[3]==='b'?'bot':'local',peer:x[4],lv:x[5]}));MY=SL.findIndex(x=>x&&x.peer===MP);menu();}
+        // Check the game snapshot even while the guest is still in the lobby.
+        // The host starts by publishing /snap; lobby-only polling would never
+        // switch the guest to the game screen.
+        let gameSnap=await fbReq(base+'/snap');
+        if(gameSnap){try{apply(gameSnap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
+        else{
+          let lobby=await fbReq(base+'/lobby');
+          if(lobby&&Array.isArray(lobby.sl)){SL=lobby.sl.map((x,i)=>x&&({n:x[0],tk:x[1],col:x[2],type:x[3]==='m'?'me':x[3]==='r'?'remote':x[3]==='b'?'bot':'local',peer:x[4],lv:x[5]}));MY=SL.findIndex(x=>x&&x.peer===MP);menu();}
+        }
       }
     }
    }catch(e){LE=e.message;}
