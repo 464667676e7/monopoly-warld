@@ -144,7 +144,7 @@ if(!g.length&&!r.length&&!cg&&!cr)return info('לא בחרת כלום בעסקה
 showM(`<h2>הצעת עסקה</h2><b>${a.n} נותן:</b> ${g.map(i=>S[i].n).join(', ')||'—'}${cg?' + '+cg+' ₪':''}<br><b>${b.n} נותן:</b> ${r.map(i=>S[i].n).join(', ')||'—'}${cr?' + '+cr+' ₪':''}<br><b>${b.n}, מאשר?</b>`,[['מאשר',()=>{g.forEach(i=>S[i].o=o);r.forEach(i=>S[i].o=cur);a.m+=cr-cg;b.m+=cg-cr;log('העסקה בוצעה ✅')}],['דוחה',()=>log('העסקה נדחתה')]])}],['ביטול',()=>{}]]);LOCW=0;render()};
 
 ['mng','trd','fin'].forEach(f=>{let o=window[f];window[f]=()=>{LOCW=1;o();LOCW=0;render()}});
-['rb','ra','pj','et','bust','mb','act'].forEach(f=>{O[f]=window[f];window[f]=(...a)=>{if(!G)return;if(f=='mb'&&M&&M.loc)return O.mb(...a);if(ONL&&!HOST)return RM.emit('act',{f,a,s:MY});if(mine(actor()))O[f](...a)}});
+['rb','ra','pj','et','bust','mb','act','bid'].forEach(f=>{O[f]=window[f];window[f]=(...a)=>{if(!G)return;if(f=='mb'&&M&&M.loc)return O.mb(...a);if(ONL&&!HOST)return RM.emit('act',{f,a,s:MY});if(mine(actor()))O[f](...a)}});
 function roll(f,cb){paint(f);document.querySelectorAll('#dc .die').forEach((e,i)=>{let x=i?1:-1,r=ROTN[f[i]];e.animate([{transform:`translate(${x*160}px,-300px) scale(1.8)`,opacity:.5},{transform:`translate(${x*24}px,12px) scale(1.05)`,offset:.55},{transform:`translate(${x*8}px,-10px)`,offset:.78},{transform:'none'}],{duration:1100,easing:'ease-out'});e.firstChild.animate([{transform:`rotateX(${r[0]+720}deg) rotateY(${r[1]+540}deg) rotateZ(${x*360}deg)`},{transform:`rotateX(${r[0]}deg) rotateY(${r[1]}deg) rotateZ(0deg)`}],{duration:1100,easing:'cubic-bezier(.2,.7,.3,1)'})});setTimeout(()=>cb&&cb(),1150)}
 function rb(){if(busy||rolled||M)return;busy=1;d=[r6(),r6()];RN++;roll(d,()=>{busy=0;aft()});render()}
 function snap(){return{c:cur,r:rolled,b:dbl,d,rn:RN,rt:RT,bz:busy?1:0,mv:MV?P.indexOf(MV):-1,meta:P.map(q=>[q.n,q.tk,q.col,q.type[0],q.peer||'']),p:P.map(q=>[q.pos,q.m,q.j,q.jt,q.out]),o:S.map(s=>s.o<0?'x':s.o).join(''),h:S.map(s=>s.h).join(''),mm:S.map(s=>s.m).join(''),lg:LOG.slice(-6),pot:POT,au:AU?{n:AU.n,pr:AU.pr,hi:AU.hi,hb:AU.hb,t:AU.t}:0,md:M&&!M.loc?{h:M.h.slice(0,1500),w:actor(),b:M.b.map(x=>[x[0],(typeof x[2]=='function'?x[2]():x[2])?1:0])}:null}}
@@ -170,11 +170,11 @@ async function conn(c){
    },close:()=>{stopped=true}};
   const poll=async()=>{if(stopped||!ONL)return;try{
     let room=await fbReq(base);if(!room)throw Error('החדר נסגר');
-    if(HOST){let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};}
+    if(HOST){let players=room.players||{};let peers=Object.keys(players).filter(k=>k!==MP);for(let peer of peers){let d=players[peer];let i=SL.findIndex(x=>x&&x.peer===peer);if(i<0)i=SL.findIndex((x,k)=>k>0&&!x);if(i>=0)SL[i]={n:d.n||'חבר',tk:d.tk||T4[i],col:d.col||CL[i],type:'remote',peer,lv:2};if(d&&d.change){let ch=d.change,cf=ch.f,ca=Array.isArray(ch.a)?ch.a:[];if(i>=0&&ca[0]===MY&&['ct','cc'].includes(cf)){if(cf==='ct')SL[i].tk=ca[1];if(cf==='cc')SL[i].col=ca[1];if(G&&P[i]){if(cf==='ct')P[i].tk=ca[1];if(cf==='cc'){P[i].col=ca[1];PC[i]=ca[1];}}}await fbReq(base+'/players/'+peer+'/change','DELETE');}}
       for(let i=1;i<SL.length;i++)if(SL[i]?.type==='remote'&&!players[SL[i].peer])SL[i]=null;
       let all=room.messages||{};for(let peer of Object.keys(all)){for(let id of Object.keys(all[peer]||{})){let q=all[peer][id];if(!q)continue;await fbReq(base+'/messages/'+peer+'/'+id,'DELETE');
         // Process guest actions on the host. The REST transport has no event emitter listeners.
-        if(q.ev==='act'&&q.data){let a=q.data.s,f=q.data.f,args=Array.isArray(q.data.a)?q.data.a:[];let allowed=['rb','ra','pj','et','bust','mb','act'];
+        if(q.ev==='act'&&q.data){let a=q.data.s,f=q.data.f,args=Array.isArray(q.data.a)?q.data.a:[];let allowed=['rb','ra','pj','et','bust','mb','act','bid'];
           if(allowed.includes(f)&&P[a]&&P[a].type==='remote'&&P[a].peer===peer&&actor()===a&&O[f]){try{O[f](...args)}catch(e){LE='שגיאה בביצוע פעולה של שחקן: '+e.message;console.error(e)}}
         }
       }}
