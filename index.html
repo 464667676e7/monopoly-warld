@@ -184,7 +184,7 @@ async function conn(c){
       if(room.snap){try{apply(room.snap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
     }
    }catch(e){LE=e.message;}
-   if(!stopped&&ONL)setTimeout(poll,900);
+   if(!stopped&&ONL)setTimeout(poll,300);
   };
   setTimeout(poll,250);return RM;
  }catch(e){LE=(e&&e.message)||'שגיאת חיבור';return 0}
