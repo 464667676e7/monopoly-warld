@@ -184,12 +184,12 @@ async function conn(c){
       if(room.snap){try{apply(room.snap)}catch(e){LE='שגיאה בקבלת מצב המשחק: '+e.message;console.error(e)}}
     }
    }catch(e){LE=e.message;}
-   if(!stopped&&ONL)setTimeout(poll,900);
+   if(!stopped&&ONL)setTimeout(poll,300);
   };
   setTimeout(poll,250);return RM;
  }catch(e){LE=(e&&e.message)||'שגיאת חיבור';return 0}
 }
-setInterval(()=>{if(!RM)return;if(ONL&&HOST)G?sendS():sendL();else if(ONL&&!G)RM.emit('hello',{})},3000);
+setInterval(()=>{if(!RM)return;if(ONL&&HOST)G?sendS():sendL();else if(ONL&&!G)RM.emit('hello',{})},300);
 const me=()=>({n:NAME,tk:'🎩',col:CL[0],type:'me'}),go=s=>{ST.s=s;menu()};
 function sp(m){ONL=0;HOST=1;ST={s:'lobby',m};SL=m==='single'?[me(),{n:'בוט 1',tk:'✈️',col:CL[1],type:'bot',lv:2},{n:'בוט 2',tk:'🚗',col:CL[2],type:'bot',lv:2},{n:'בוט 3',tk:'🚢',col:CL[3],type:'bot',lv:2}]:[me(),{n:'אורח 2',tk:'✈️',col:CL[1],type:'local'},null,null];menu()}
 function onl(){ST={s:'cj',m:'onl'};menu()}
