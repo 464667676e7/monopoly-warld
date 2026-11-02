@@ -165,7 +165,7 @@ async function conn(c){
     await fbReq(base+'/players/'+MP,'PUT',{n:NAME,tk:T4.find(x=>x!==SL[0]?.tk)||T4[1],col:CL.find(x=>x!==SL[0]?.col)||CL[1],type:'remote',peer:MP,joinedAt:Date.now()});}
   RM={on:(ev,fn)=>{(handlers[ev]||(handlers[ev]=[])).push(fn)},emit:(ev,data)=>{
     if(HOST&&(ev==='snap'||ev==='lobby')){fbReq(base+'/'+ev,'PUT',data).catch(e=>{LE=e.message});return}
-    if(!HOST&&ev==='lob'){fbReq(base+'/players/'+MP+'/change','PUT',data).catch(e=>{LE=e.message});return}
+    if(!HOST&&ev==='lob'){fbReq(base+'/players/'+MP,'PATCH',data).catch(e=>{LE=e.message});return}
     if(!HOST&&ev==='act'){let id='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);fbReq(base+'/messages/'+MP+'/'+id,'PUT',{ev,data,at:Date.now()}).catch(e=>{LE=e.message})}
    },close:()=>{stopped=true}};
   const poll=async()=>{if(stopped||!ONL)return;try{
@@ -198,7 +198,7 @@ async function jn(){let c=$('#jc').value.trim();if(c.length!=5)return;ONL=1;HOST
 function ad(i,t){SL[i]={n:t=='bot'?'בוט '+i:'אורח '+(i+1),tk:T4.find(x=>!SL.some(s=>s&&s.tk==x)),col:CL.find(x=>!SL.some(s=>s&&s.col==x)),type:t,lv:2};menu()}
 function ct(i){let n=T4[(T4.indexOf(SL[i].tk)+1)%T4.length];while(SL.some(s=>s&&s!=SL[i]&&s.tk==n))n=T4[(T4.indexOf(n)+1)%T4.length];SL[i].tk=n;menu()}
 function cc(i,c){if(!SL.some(s=>s&&s!=SL[i]&&s.col==c))SL[i].col=c;menu()}
-['ct','cc'].forEach(f=>{let o=window[f];window[f]=(...a)=>{if(ONL&&!HOST){if(a[0]==MY)RM.emit('lob',{f,a})}else o(...a)}});
+['ct','cc'].forEach(f=>{let o=window[f];window[f]=(...a)=>{if(ONL&&!HOST){if(a[0]!==MY)return;o(...a);let q=SL[MY];if(q&&RM)RM.emit('lob',{tk:q.tk,col:q.col,n:q.n});}else o(...a)}});
 const lv=i=>{SL[i].lv=SL[i].lv%3+1;menu()},rmv=i=>{SL[i]=null;menu()};
 function st(){let L=SL.filter(Boolean);if(L.length<2)return;P=L.map(x=>({...x,m:2500,pos:0,j:0,jt:0,out:0,cr:-1}));P.forEach((q,i)=>PC[i]=q.col);cur=0;rolled=0;dbl=0;LOG=['המשחק התחיל! בהצלחה ✈️'];G=1;ST=null;menu();paint([1,1]);render();if(ONL&&HOST&&RM)sendS()}
 function slot(i){let x=SL[i];if(!x)return`<div class=sl>${HOST?`<button onclick="ad(${i},'local')">הוסף אורח</button><button onclick="ad(${i},'bot')">הוסף בוט</button>`:'ממתין...'}</div>`;
