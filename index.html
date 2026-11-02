@@ -18,7 +18,10 @@ button{font:inherit;background:var(--ac);color:#fff;border:0;border-radius:8px;p
 button:focus-visible,input:focus-visible{outline:3px solid var(--ink)}
 .bt{display:flex;flex-wrap:wrap;justify-content:center}
 .mo{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;z-index:9;padding:10px}
-.mc{background:var(--card);border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:calc(var(--H,100dvh)*.88);overflow:auto}
+.mc{background:var(--card);border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 20px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0}
+.mo{padding:max(8px,env(safe-area-inset-top,0px)) 8px max(8px,env(safe-area-inset-bottom,0px));}
+@media(max-width:600px){.mc{width:100%;max-width:100%;padding:clamp(10px,3vw,16px);border-radius:12px;font-size:clamp(14px,3.8vw,17px)}.mc h2{font-size:clamp(20px,5.5vw,26px)}.mc button{min-height:44px;padding:.55em .8em;font-size:clamp(14px,3.8vw,17px)}.mc .bt{gap:4px}.mc .bt button{flex:1 1 auto}}
+@media(max-height:650px){.mo{align-items:flex-start}.mc{max-height:calc(100dvh - 16px);}}
 .rw{display:flex;align-items:center;gap:6px;margin:4px 0;font-size:14px}.rw i{width:12px;height:22px;display:inline-block}.rw span{flex:1}
 label{display:block;font-size:14px}
 #pl{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:6px;max-width:900px;margin:auto}
@@ -283,7 +286,7 @@ let edge=r===1?'bottom':r===11?'top':c===1?'right':c===11?'left':'bottom';return
 $('#pl').innerHTML=P.map((q,i)=>{let d=DL[i]&&DL[i].t>T?DL[i]:0;return`<div class="pc ${i==cur?'on':''}" style="border-color:${q.col};${q.out?'opacity:.4':''}"><div>${badge(q)} <b>${q.n}${q.type=='bot'?' 🤖':''}</b></div><div class="mn">${q.m<0?`<span style="color:#d00">חוב ₪${-q.m}</span>`:'₪'+q.m}${d?`<span class="dl ${d.d>0?'up':'dn'}">${d.d>0?'+':''}${d.d}</span>`:''}</div><div>${S.filter(s=>s.o==i).map(s=>`<i title="${s.n}" style="background:${s.col||'#888'}"></i>`).join('')}</div></div>`}).join('');
 $('#lg').innerHTML=LOG.slice(-2).reverse().join('<br>');$('#rt').innerHTML=RT?'✈️ '+RT:'';$('#rt').style.display=RT?'block':'none';
 if(!$('#au'))document.body.insertAdjacentHTML('beforeend','<div id="au"></div>');$('#au').innerHTML=AU?auH():'';
-$('#md').innerHTML=M?`<div class="mo ${M.loc?'bl':''}"><div class="mc">${M.h}<div class="bt">${M.b.map(([l,f,x],i)=>`<button onclick="mb(${i})" ${(typeof x=='function'?x():x)||!mine(a)?'disabled':''}>${l}</button>`).join('')}</div>${mine(a)?'':'<small>ממתין ל'+P[a].n+'…</small>'}</div></div>`:'';
+let md=$('#md'),oldMC=md.querySelector('.mc'),modalHTML=M?`<div class="mo ${M.loc?'bl':''}"><div class="mc">${M.h}<div class="bt">${M.b.map(([l,f,x],i)=>`<button onclick="mb(${i})" ${(typeof x=='function'?x():x)||!mine(a)?'disabled':''}>${l}</button>`).join('')}</div>${mine(a)?'':'<small>ממתין ל'+P[a].n+'…</small>'}</div></div>`:'';if(md.dataset.modalHTML!==modalHTML){let sy=oldMC?oldMC.scrollTop:0;md.innerHTML=modalHTML;md.dataset.modalHTML=modalHTML;let newMC=md.querySelector('.mc');if(newMC&&sy>0){newMC.scrollTop=sy;requestAnimationFrame(()=>{if(newMC.isConnected)newMC.scrollTop=sy})}}
 let f=$('#fy');if(MV){f.innerHTML=badge(MV);if(f.style.display!='block'){f.style.transition='none';flyTo(MV.pos);f.style.display='block';f.getBoundingClientRect();f.style.transition=''}else flyTo(MV.pos)}else f.style.display='none';
 if(ONL&&HOST)sendS();
 if(!BT&&!busy&&!gu&&P[a]&&P[a].type=='bot'&&!P[a].out)BT=setTimeout(()=>{BT=0;bot();render()},950)}
