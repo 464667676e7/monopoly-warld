@@ -152,7 +152,7 @@ const sendS=()=>RM&&RM.emit('snap',snap()),sendL=()=>RM&&RM.emit('lobby',{sl:SL.
 function apply(s){MY=s.meta.findIndex(m=>m[4]&&m[4]==MP);P=s.meta.map((m,i)=>({...(P[i]||{pos:0,m:0,j:0,jt:0}),n:m[0],tk:m[1],col:m[2],type:i==MY?'me':'x'}));s.p.forEach((a,i)=>{[P[i].pos,P[i].m,P[i].j,P[i].jt,P[i].out]=a;PC[i]=P[i].col});S.forEach((x,i)=>{x.o=s.o[i]=='x'?-1:+s.o[i];x.h=+s.h[i];x.m=+s.mm[i]});cur=s.c;rolled=s.r;dbl=s.b;busy=s.bz;RT=s.rt;LOG=s.lg;POT=s.pot||0;AU=s.au||null;MV=s.mv>=0?P[s.mv]:null;
 if(s.rn!=RN){RN=s.rn;d=s.d;roll(d)}else if(!s.bz){d=s.d;paint(d)}
 if(!(M&&M.loc))M=s.md?{h:s.md.h,w:s.md.w,b:s.md.b.map(x=>[x[0],()=>{},x[1]])}:null;
-if(!G){G=1;ST=null}render()}
+G=1;ST=null;menu();render()}
 const FB_DB='https://monopoly-world-f758d-default-rtdb.europe-west1.firebasedatabase.app';
 const peerId=()=>{let k='mw_peer_id';let v='';try{v=localStorage.getItem(k)||'';if(!v){v='p'+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem(k,v)}}catch(e){v='p'+Math.random().toString(36).slice(2)+Date.now().toString(36)}return v};
 async function fbReq(path,method='GET',body){let r=await fetch(FB_DB+'/'+path+'.json',{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let t=await r.text();if(!r.ok)throw Error('Firebase '+r.status+': '+t);return t?JSON.parse(t):null}
@@ -200,7 +200,7 @@ function ct(i){let n=T4[(T4.indexOf(SL[i].tk)+1)%T4.length];while(SL.some(s=>s&&
 function cc(i,c){if(!SL.some(s=>s&&s!=SL[i]&&s.col==c))SL[i].col=c;menu()}
 ['ct','cc'].forEach(f=>{let o=window[f];window[f]=(...a)=>{if(ONL&&!HOST){if(a[0]==MY)RM.emit('lob',{f,a})}else o(...a)}});
 const lv=i=>{SL[i].lv=SL[i].lv%3+1;menu()},rmv=i=>{SL[i]=null;menu()};
-function st(){let L=SL.filter(Boolean);if(L.length<2)return;P=L.map(x=>({...x,m:2500,pos:0,j:0,jt:0,out:0,cr:-1}));P.forEach((q,i)=>PC[i]=q.col);cur=0;rolled=0;dbl=0;LOG=['המשחק התחיל! בהצלחה ✈️'];G=1;ST=null;paint([1,1]);render();if(ONL&&HOST&&RM)sendS()}
+function st(){let L=SL.filter(Boolean);if(L.length<2)return;P=L.map(x=>({...x,m:2500,pos:0,j:0,jt:0,out:0,cr:-1}));P.forEach((q,i)=>PC[i]=q.col);cur=0;rolled=0;dbl=0;LOG=['המשחק התחיל! בהצלחה ✈️'];G=1;ST=null;menu();paint([1,1]);render();if(ONL&&HOST&&RM)sendS()}
 function slot(i){let x=SL[i];if(!x)return`<div class=sl>${HOST?`<button onclick="ad(${i},'local')">הוסף אורח</button><button onclick="ad(${i},'bot')">הוסף בוט</button>`:'ממתין...'}</div>`;
 let ed=(i==0&&HOST)||x.type=='local';return`<div class=sl style="border-color:${x.col}"><div class=tb2 onclick="ct(${i})">${tkv(x)}</div><input value="${x.n}" ${ed?`onchange="SL[${i}].n=this.value;NAME=SL[0].n"`:'disabled'}>${x.type=='bot'&&HOST?`<button onclick="lv(${i})">רמה: ${['','קל','בינוני','קשה'][x.lv]}</button>`:''}<div class=cs>${CL.map(c=>`<b style="background:${c}" onclick="cc(${i},'${c}')"></b>`).join('')}</div>${i&&HOST?`<button onclick="rmv(${i})">הסר</button>`:''}</div>`}
 function menu(){let m=$('#menu');m.style.display=ST?'flex':'none';if(!ST)return;let s=ST.s,h='',bk=t=>`<button class=bk onclick="go('${t}')">↩</button>`;
