@@ -81,3 +81,14 @@ test('auction state is validated and reconstructable from the board', () => {
   auction.au.s = 999;
   assert.equal(security.validSnap(auction), false);
 });
+
+test('host snapshot is checked before broadcast and guest accepts only host identity', () => {
+  assert.match(html, /return validSnap\(s\)\?s:null/);
+  assert.match(html, /snapshot אינו מהמארח/);
+});
+
+test('room start closes lobby and join attempts are throttled client-side', () => {
+  assert.match(html, /rooms\/mw'\+roomCode+'\/status','PUT','playing'/);
+  assert.match(html, /function joinRateLimit\(\)/);
+  assert.match(html, /a\.length>=5/);
+});
