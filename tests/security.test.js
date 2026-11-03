@@ -88,7 +88,7 @@ test('host snapshot is checked before broadcast and guest accepts only host iden
 });
 
 test('room start closes lobby and join attempts are throttled client-side', () => {
-  assert.match(html, /rooms\/mw'\+roomCode+'\/status','PUT','playing'/);
+  assert.ok(html.includes("fbReq('rooms/mw'+roomCode+'/status','PUT','playing')"));
   assert.match(html, /function joinRateLimit\(\)/);
   assert.match(html, /a\.length>=5/);
 });
