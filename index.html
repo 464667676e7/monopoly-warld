@@ -30,7 +30,12 @@ label{display:block;font-size:14px}
 #lg{max-width:900px;margin:6px auto;padding:8px;font-size:13px;max-height:160px;overflow:auto;background:var(--card);border-radius:10px}
 </style></head><body>
 <div id=app><div id=side><div id=pl></div></div><div id=mc><div id=wr><div id=bd></div><div id=fy></div><div id=dc><div class=die onclick="rb()"></div><div class=die onclick="rb()"></div></div><div id=rt></div></div><div id=bar><div id=lg></div><div id=bt class=bt></div></div></div></div><svg width="0" height="0" style="position:absolute"><defs><linearGradient id="mg" x1="0" x2="1"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#a9b4c0"/><stop offset=".6" stop-color="#f0f4f8"/><stop offset="1" stop-color="#667384"/></linearGradient></defs></svg><div id=md></div><div id=menu></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
+const firebaseConfig={apiKey:"AIzaSyCt6fxi6rMQ3LSVWf61LACWisZ_p2i6PFQ",authDomain:"monopoly-world-f758d.firebaseapp.com",databaseURL:"https://monopoly-world-f758d-default-rtdb.europe-west1.firebasedatabase.app",projectId:"monopoly-world-f758d",storageBucket:"monopoly-world-f758d.firebasestorage.app",messagingSenderId:"61899297576",appId:"1:61899297576:web:0608870fc072b1a45f361d"};
+firebase.initializeApp(firebaseConfig);const FB_AUTH=firebase.auth();
+async function ensureFirebaseAuth(){if(!FB_AUTH.currentUser)await FB_AUTH.signInAnonymously();return FB_AUTH.currentUser.getIdToken();}
 const $=q=>document.querySelector(q),r6=()=>1+Math.random()*6|0,sh=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
 const PC=['#e53935','#1e88e5','#2e9e4f','#f59a23'],TK=['✈️','🚀','🛸','🚁','🎈','🛩️'];
 const GR={b:['#8b5a3c',50,'תאילנד',[['פוקט',60,2],['בנגקוק',60,4]]],l:['#8fd3f4',50,'יוון',[['מיקונוס',100,6],['סנטוריני',100,6],['אתונה',120,8]]],p:['#e55fa6',100,'גרמניה',[['מינכן',140,10],['המבורג',140,10],['ברלין',160,12]]],o:['#f59a23',100,'הודו',[['גואה',180,14],['מומבאי',180,14],['ניו דלהי',200,16]]],r:['#e03a3a',150,'סין',[['שנחאי',220,18],['הונג קונג',220,18],['בייג׳ינג',240,20]]],y:['#f4d51c',150,'רוסיה',[['קזאן',260,22],['סנט פטרסבורג',260,22],['מוסקבה',280,24]]],g:['#2fa84f',200,'ישראל',[['אילת',300,26],['תל אביב',300,26],['ירושלים',320,28]]],n:['#2355c7',200,'ארה״ב',[['ניו יורק',350,35],['וושינגטון',400,50]]]};
@@ -163,14 +168,14 @@ if(!(M&&M.loc)){let nextM=s.md?{h:cleanModalHTML(s.md.h),w:s.md.w,b:s.md.b.map(x
 G=1;ST=null;menu();render()}
 const FB_DB='https://monopoly-world-f758d-default-rtdb.europe-west1.firebasedatabase.app';
 const peerId=()=>{let k='mw_peer_id',v='';try{v=localStorage.getItem(k)||'';if(!/^p[a-z0-9]{8,40}$/.test(v)){v='p'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem(k,v)}}catch(e){v='p'+Math.random().toString(36).slice(2,12)+Date.now().toString(36)}return v};
-async function fbReq(path,method='GET',body){let r=await fetch(FB_DB+'/'+path+'.json',{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let t=await r.text();if(!r.ok)throw Error('Firebase '+r.status+': '+t);return t?JSON.parse(t):null}
+async function fbReq(path,method='GET',body){let token=await ensureFirebaseAuth(),url=FB_DB+'/'+path+'.json?auth='+encodeURIComponent(token);let r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let t=await r.text();if(!r.ok)throw Error('Firebase '+r.status+': '+t);return t?JSON.parse(t):null}
 async function conn(c){
  try{
-  MP=peerId(); const base='rooms/mw'+c; const handlers={}; let stopped=false;
+  await ensureFirebaseAuth();MP=peerId(); const base='rooms/mw'+c; const handlers={}; let stopped=false;
   const dispatch=(ev,m)=>{(handlers[ev]||[]).forEach(fn=>{try{fn(m)}catch(e){console.error(e)}})};
-  if(HOST){let exists=await fbReq(base);if(exists)throw Error('קוד חדר תפוס. צור חדר חדש.');SL[0].peer=MP;await fbReq(base,'PUT',{createdAt:Date.now(),host:MP,status:'lobby',players:{[MP]:{n:safePlayerName(NAME),tk:SL[0].tk,col:SL[0].col,type:'me',peer:MP}}});}
+  if(HOST){let exists=await fbReq(base);if(exists)throw Error('קוד חדר תפוס. צור חדר חדש.');SL[0].peer=MP;await fbReq(base,'PUT',{createdAt:Date.now(),host:MP,ownerUid:FB_AUTH.currentUser.uid,status:'lobby',players:{[MP]:{n:safePlayerName(NAME),tk:SL[0].tk,col:SL[0].col,type:'me',peer:MP,uid:FB_AUTH.currentUser.uid}}});}
   else {let room=await fbReq(base);if(!room||!room.host||room.status!=='lobby')throw Error('החדר לא נמצא או שהמשחק כבר התחיל.');let seats=room.lobby&&Array.isArray(room.lobby.sl)?room.lobby.sl.filter(Boolean).length:Object.keys(room.players||{}).length;if(seats>=4)throw Error('החדר מלא.');if(room.players&&room.players[MP])throw Error('מזהה שחקן כבר נמצא בחדר.');
-    await fbReq(base+'/players/'+MP,'PUT',{n:escText(NAME),tk:T4[1],col:CL[1],type:'remote',peer:MP,joinedAt:Date.now()});}
+    await fbReq(base+'/players/'+MP,'PUT',{n:escText(NAME),tk:T4[1],col:CL[1],type:'remote',peer:MP,uid:FB_AUTH.currentUser.uid,joinedAt:Date.now()});}
   RM={on:(ev,fn)=>{(handlers[ev]||(handlers[ev]=[])).push(fn)},emit:(ev,data)=>{
     if(HOST&&(ev==='snap'||ev==='lobby'))return fbReq(base+'/'+ev,'PUT',data).catch(e=>{if(ev==='snap')LAST_SNAP_SENT='';LE='שליחת עדכון נכשלה: '+e.message;return false});
     if(!HOST&&ev==='lob')return fbReq(base+'/players/'+MP,'PATCH',data).catch(e=>{LE='עדכון לובי נכשל: '+e.message;return false});
