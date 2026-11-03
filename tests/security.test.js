@@ -69,7 +69,7 @@ test('room join code is validated as nine decimal digits', () => {
 });
 
 test('embedded JavaScript parses without syntax errors', () => {
-  const blocks = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)].map(x => x[1]).filter(x => x.trim());
+  const blocks = html.split('<script>').slice(1).map(x => x.split('</script>')[0]).filter(x => x.trim());
   assert.ok(blocks.length > 0, 'inline scripts are found');
   for (const block of blocks) new vm.Script(block);
 });
