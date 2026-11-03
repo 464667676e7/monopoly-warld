@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid == data.child('ownerUid').val() || (!data.exists() && auth.uid == newData.child('ownerUid').val()))",
+        "players": {
+          "$peer": {
+            ".write": "auth != null && (auth.uid == data.parent().parent().child('ownerUid').val() || auth.uid == newData.child('uid').val() || auth.uid == data.child('uid').val())"
+          }
+        },
+        "messages": {
+          "$peer": {
+            "$message": {
+              ".write": "auth != null && (auth.uid == data.parent().parent().parent().child('ownerUid').val() || auth.uid == data.parent().parent().parent().child('players').child($peer).child('uid').val())"
+            }
+          }
+        }
+      }
+    }
+  }
+}
