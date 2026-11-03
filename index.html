@@ -212,14 +212,41 @@ else if(s=='mode')h=bk('home')+`<h2>בחר מצב משחק</h2><div class=cds>${
 else if(s=='cj')h=bk('mode')+`<h2>אונליין עם חברים</h2>${ST.err?`<p>${ST.err}</p>`:''}<div class=cds><div class=cd onclick="mk()"><div class=ic>➕</div><b>צור משחק</b><small>הזמן חברים עם קוד</small></div><div class=cd><div class=ic>🔑</div><b>הצטרף למשחק</b><input id=jc maxlength=5 inputmode=numeric placeholder="קוד 5 ספרות"><button onclick="jn()">הצטרף</button></div></div>`;
 else h=bk(ST.m=='onl'?'cj':'mode')+(ST.code?`<h2>קוד חדר: ${ST.code}</h2><button onclick="navigator.clipboard&&navigator.clipboard.writeText('${ST.code}')">📋 העתק קוד</button>`:'<h2>לובי</h2>')+`<div class=sls>${[0,1,2,3].map(slot).join('')}</div>`+(HOST?`<button class=play onclick="st()">מוכן!</button>`:'<p>ממתין שהמארח יתחיל...</p>');
 m.innerHTML=SKY+'<div class=mi>'+h+'</div>';if(ONL&&HOST&&RM&&s=='lobby')sendL()}
+function maybeBotTrade(a,L){
+ if(BOTTRADE_TURN===cur)return 0;
+ BOTTRADE_TURN=cur;
+ let bot=P[a];if(!bot||bot.type!=='bot'||bot.out)return 0;
+ let humans=P.map((q,i)=>i).filter(i=>i!==a&&!P[i].out&&P[i].type!=='bot');
+ if(!humans.length)return 0;
+ let offers=[];
+ for(let h of humans){
+  for(let s of S.filter(x=>x.t==='R'&&x.o===h)){
+   let G=grp(s),owned=G.filter(x=>x.o===a);
+   if(G.length<2||owned.length!==G.length-1||G.some(x=>x.h||x.m))continue;
+   let cash=Math.round(s.pr*([0,1.12,1.28,1.45][L]||1.28)/10)*10;
+   let reserve=L===1?450:L===2?300:200;
+   if(bot.m<cash+reserve)continue;
+   offers.push({h,s,G,cash});
+  }
+ }
+ if(!offers.length)return 0;
+ offers.sort((x,y)=>y.s.pr-x.s.pr);
+ let z=offers[0],h=P[z.h],s=z.s;
+ showM(`<h2>🤝 הצעת טרייד מבית ${bot.n}</h2><div style="text-align:center"><b>${bot.n} רוצה את ${s.c} – ${s.n}</b><br>כדי להשלים את כל המדינה ולבנות בה בתים!<hr><b>הבוט נותן לך:</b><br><span style="font-size:24px;color:#16833b">₪${z.cash}</span><br><b>אתה נותן לבוט:</b><br>${s.n}<br><small>אם תאשר, הבוט ישלים את הסט ויוכל לבנות בתים.</small></div>`,[
+ ['🤝 קבל את הטרייד',()=>{if(s.o!==z.h||bot.m<z.cash||z.G.some(x=>x.h||x.m)){log('הטרייד כבר לא אפשרי');return} s.o=a;bot.m-=z.cash;h.m+=z.cash;log(`🤝 ${h.n} קיבל ${z.cash} ₪ מ${bot.n} והעביר לו את ${s.n}. ${bot.n} השלים את ${s.c}!`)}],
+ ['❌ דחה',()=>log(`${h.n} דחה את הצעת הטרייד של ${bot.n}`)]
+ ]);
+ M.w=z.h;
+ return 1;
+}
 function bot(){if(busy||!G||AU)return;let a=actor(),p=P[a],L=p.lv||2;
 if(M){let b=M.b,k=-1;if(b[0][0][0]=='+'){let v=A?A.s.pr*[0,.7,.95,1.15][L]:0,hi=A?A.hi:0,x=[10,50,100].find(x=>hi+x<=v&&p.m>=hi+x+100);k=x?b.findIndex(y=>y[0]=='+'+x):b.length-1}
 else if(b[0][0].startsWith('קנה')){let pr=+b[0][0].replace(/\D/g,'');k=!(typeof b[0][2]=='function'?b[0][2]():b[0][2])&&(L==1?Math.random()<.6:p.m-pr>=(L==2?250:100))?0:1}
 else if(b[0][0]=='מאשר'){k=btr(a,L)?0:1}else{k=b.findIndex(x=>!(typeof x[2]=='function'?x[2]():x[2]));if(k<0)k=b.length-1}return O.mb(k)}
-if(p.m<0){let s=S.find(x=>x.o==a&&x.h);if(s){s.h--;p.m+=s.hc/2;return}s=S.find(x=>x.o==a&&!x.m&&!grp(x).some(y=>y.h));if(s){s.m=1;p.m+=s.pr/2;return}return O.bust()}
+if(!M&&maybeBotTrade(a,L))return;if(p.m<0){let s=S.find(x=>x.o==a&&x.h);if(s){s.h--;p.m+=s.hc/2;return}s=S.find(x=>x.o==a&&!x.m&&!grp(x).some(y=>y.h));if(s){s.m=1;p.m+=s.pr/2;return}return O.bust()}
 if(!rolled){if(p.j){return p.m>=(L>1?300:800)?O.pj():O.rb()}return O.rb()}
 if(dbl&&!p.j)return O.ra();
-if(L>1){let s=S.filter(x=>x.o==a&&x.t=='R'&&mono(x)&&!grp(x).some(y=>y.m||y.h<x.h)&&x.h<5&&p.m-x.hc>=(L==3?250:500)).sort((u,v)=>u.h-v.h)[0];if(s){s.h++;p.m-=s.hc;log(`${p.n} בנה ב${s.n}`);return}}
+if(L>=1){let reserve=L==1?600:L==2?350:250;let s=S.filter(x=>x.o==a&&x.t=='R'&&mono(x)&&!grp(x).some(y=>y.m||y.h<x.h)&&x.h<5&&p.m-x.hc>=reserve).sort((u,v)=>u.h-v.h||v.r-u.r)[0];if(s){s.h++;p.m-=s.hc;log(`🏠 ${p.n} בנה בית ב${s.n} (נשארו לו ${p.m} ₪)`);return}}
 O.et()}
 function render(){if(ST)menu();if(!G)return;let p=P[cur],a=actor(),mi=mine(cur),gu=ONL&&!HOST,B=[];
 if(p.m<0)B.push(['פשיטת רגל','bust()']);
@@ -243,7 +270,7 @@ const ME=()=>ONL&&!HOST?MY:(P[cur]&&mine(cur)?cur:P.findIndex(q=>q.type=='me'));
 const liq=i=>P[i].m+S.filter(s=>s.o==i).reduce((a,s)=>a+(s.m?0:s.pr/2)+(s.h||0)*(s.hc||0)/2,0);
 const canB=(s,w)=>s.t=='R'&&s.o==w&&mono(s)&&grp(s).every(x=>!x.m&&x.h>=s.h)&&s.h<5&&P[w].m>=s.hc,canS=(s,w)=>s.t=='R'&&s.o==w&&s.h>0&&grp(s).every(x=>x.h<=s.h);
 const _pay=pay;pay=function(a,b,x){if(b<0)POT+=x;_pay(a,b,x)};
-const _nx=nx;nx=function(){MODE='';_nx()};
+let BOTTRADE_TURN=-1;const _nx=nx;nx=function(){MODE='';BOTTRADE_TURN=-1;_nx()};
 function bustP(i){let p=P[i],c=p.cr;S.filter(s=>s.o==i).forEach(s=>{s.h=0;s.o=c>=0&&!P[c].out?c:-1;if(s.o<0)s.m=0});p.out=1;p.m=0;log(p.n+' פשט רגל!');if(chk())return;let w=i==cur;showM(`<h2>💥 ${p.n} פשט רגל!</h2>${c>=0?'כל הנכסים, הבתים, המלונות והטיסות עברו אל '+P[c].n:'הנכסים חזרו לבנק'}`,[['אישור',()=>{if(w)nx()}]])}
 function bust(){bustP(cur)}
 function btr(a,L){if(!TR)return 0;let q=P[a],v=(l,own)=>l.reduce((s0,i)=>{let s=S[i];return s0+s.pr*(!own&&s.t=='R'&&grp(s).every(x=>x.o==a||l.includes(x.i))?1.35:1)},0),get=v(TR.g,0)+TR.cg,give=v(TR.r,1)+TR.cr,ok=q.m+TR.cg-TR.cr>=0&&get>=give*[0,.55,.75,.95][L];log(`${q.n} ${ok?'אישר ✅':'דחה ❌ (ההצעה לא משתלמת לו מספיק)'} את העסקה`);return ok}
