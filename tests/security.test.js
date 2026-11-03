@@ -10,7 +10,7 @@ const end = html.indexOf('function snap(){', start);
 assert.ok(start >= 0 && end > start, 'security helper block is present');
 const board = Array.from({ length: 40 }, () => ({ t: 'R' }));
 const context = { S: board, document: { createElement() { return {}; } } };
-vm.runInNewContext(html.slice(start, end), context);
+vm.runInNewContext(html.slice(start, end) + '\\nglobalThis.security = { escText, safePlayerName, validSnap };', context);\nconst security = context.security;
 
 function validFixture() {
   return {
@@ -23,20 +23,20 @@ function validFixture() {
 }
 
 test('HTML text escaping blocks tag and attribute injection', () => {
-  const out = context.escText('<img src=x onerror=alert(1)> "x"');
+  const out = security.escText('<img src=x onerror=alert(1)> "x"');
   assert.equal(out, '&lt;img src=x onerror=alert(1)&gt; &quot;x&quot;');
   assert.ok(!out.includes('<img'));
 });
 
 test('player-name escaping is idempotent for lobby round trips', () => {
-  const first = context.safePlayerName('<script>alert(1)</script>');
+  const first = security.safePlayerName('<script>alert(1)</script>');
   const second = context.safePlayerName(first);
   assert.equal(first, second);
   assert.ok(!first.includes('<script'));
 });
 
 test('valid multiplayer snapshot passes validation', () => {
-  assert.equal(context.validSnap(validFixture()), true);
+  assert.equal(security.validSnap(validFixture()), true);
 });
 
 test('malformed snapshots are rejected before apply', () => {
