@@ -10,8 +10,8 @@ const end = html.indexOf('function snap(){', start);
 assert.ok(start >= 0 && end > start, 'security helper block is present');
 const board = Array.from({ length: 40 }, () => ({ t: 'R' }));
 const context = { S: board, document: { createElement() { return {}; } } };
-vm.runInNewContext(html.slice(start, end) + '\\nglobalThis.security = { escText, safePlayerName, validSnap };', context);\nconst security = context.security;
-
+vm.runInNewContext(html.slice(start, end) + '\n;globalThis.security = { escText, safePlayerName, validSnap };', context);
+const security = context.security;
 function validFixture() {
   return {
     c: 0, r: 0, b: 0, d: [1, 6], rn: 1, rt: '', bz: 0, mv: -1,
