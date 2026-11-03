@@ -152,8 +152,8 @@ showM(`<h2>הצעת עסקה</h2><b>${a.n} נותן:</b> ${g.map(i=>S[i].n).join
 function roll(f,cb){paint(f);document.querySelectorAll('#dc .die').forEach((e,i)=>{let x=i?1:-1,r=ROTN[f[i]];e.animate([{transform:`translate(${x*160}px,-300px) scale(1.8)`,opacity:.5},{transform:`translate(${x*24}px,12px) scale(1.05)`,offset:.55},{transform:`translate(${x*8}px,-10px)`,offset:.78},{transform:'none'}],{duration:1100,easing:'ease-out'});e.firstChild.animate([{transform:`rotateX(${r[0]+720}deg) rotateY(${r[1]+540}deg) rotateZ(${x*360}deg)`},{transform:`rotateX(${r[0]}deg) rotateY(${r[1]}deg) rotateZ(0deg)`}],{duration:1100,easing:'cubic-bezier(.2,.7,.3,1)'})});setTimeout(()=>cb&&cb(),1150)}
 function rb(){if(busy||rolled||M)return;busy=1;d=[r6(),r6()];RN++;roll(d,()=>{busy=0;aft()});render()}
 function snap(){return{c:cur,r:rolled,b:dbl,d,rn:RN,rt:RT,bz:busy?1:0,mv:MV?P.indexOf(MV):-1,meta:P.map(q=>[q.n,q.tk,q.col,q.type[0],q.peer||'']),p:P.map(q=>[q.pos,q.m,q.j,q.jt,q.out]),o:S.map(s=>s.o<0?'x':s.o).join(''),h:S.map(s=>s.h).join(''),mm:S.map(s=>s.m).join(''),lg:LOG.slice(-6),pot:POT,au:AU?{n:AU.n,pr:AU.pr,hi:AU.hi,hb:AU.hb,t:AU.t}:0,md:M&&!M.loc?{h:M.h.slice(0,6000),w:actor(),b:M.b.map(x=>[x[0],(typeof x[2]=='function'?x[2]():x[2])?1:0])}:null}}
-const sendS=()=>RM&&RM.emit('snap',snap()),sendL=()=>RM&&RM.emit('lobby',{sl:SL.map(x=>x&&[x.n,x.tk,x.col,x.type[0],x.peer||'',x.lv||0])});
-function apply(s){MY=s.meta.findIndex(m=>m[4]&&m[4]==MP);P=s.meta.map((m,i)=>({...(P[i]||{pos:0,m:0,j:0,jt:0}),n:m[0],tk:m[1],col:m[2],type:i==MY?'me':'x'}));s.p.forEach((a,i)=>{[P[i].pos,P[i].m,P[i].j,P[i].jt,P[i].out]=a;PC[i]=P[i].col});S.forEach((x,i)=>{x.o=s.o[i]=='x'?-1:+s.o[i];x.h=+s.h[i];x.m=+s.mm[i]});cur=s.c;rolled=s.r;dbl=s.b;busy=s.bz;RT=s.rt;LOG=s.lg;POT=s.pot||0;AU=s.au||null;MV=s.mv>=0?P[s.mv]:null;
+let LAST_SNAP_SENT='',LAST_SNAP_APPLIED='';const sendS=()=>{if(!RM)return;let s=snap(),v=JSON.stringify(s);if(v===LAST_SNAP_SENT)return;LAST_SNAP_SENT=v;RM.emit('snap',s)},sendL=()=>RM&&RM.emit('lobby',{sl:SL.map(x=>x&&[x.n,x.tk,x.col,x.type[0],x.peer||'',x.lv||0])});
+function apply(s){let sig=JSON.stringify(s);if(sig===LAST_SNAP_APPLIED)return;LAST_SNAP_APPLIED=sig;MY=s.meta.findIndex(m=>m[4]&&m[4]==MP);P=s.meta.map((m,i)=>({...(P[i]||{pos:0,m:0,j:0,jt:0}),n:m[0],tk:m[1],col:m[2],type:i==MY?'me':'x'}));s.p.forEach((a,i)=>{[P[i].pos,P[i].m,P[i].j,P[i].jt,P[i].out]=a;PC[i]=P[i].col});S.forEach((x,i)=>{x.o=s.o[i]=='x'?-1:+s.o[i];x.h=+s.h[i];x.m=+s.mm[i]});cur=s.c;rolled=s.r;dbl=s.b;busy=s.bz;RT=s.rt;LOG=s.lg;POT=s.pot||0;AU=s.au||null;MV=s.mv>=0?P[s.mv]:null;
 if(s.rn!=RN){RN=s.rn;d=s.d;roll(d)}else if(!s.bz){d=s.d;paint(d)}
 if(!(M&&M.loc)){let nextM=s.md?{h:s.md.h,w:s.md.w,b:s.md.b.map(x=>[x[0],()=>{},x[1]])}:null;/* Keep the guest's active modal object stable across frequent Firebase snapshots. */if(!(ONL&&!HOST&&M&&nextM&&M.h===nextM.h))M=nextM;}
 G=1;ST=null;menu();render()}
@@ -168,7 +168,7 @@ async function conn(c){
   else {let room=await fbReq(base);if(!room||!room.host)throw Error('החדר לא נמצא. בדוק את הקוד.');
     await fbReq(base+'/players/'+MP,'PUT',{n:NAME,tk:T4.find(x=>x!==SL[0]?.tk)||T4[1],col:CL.find(x=>x!==SL[0]?.col)||CL[1],type:'remote',peer:MP,joinedAt:Date.now()});}
   RM={on:(ev,fn)=>{(handlers[ev]||(handlers[ev]=[])).push(fn)},emit:(ev,data)=>{
-    if(HOST&&(ev==='snap'||ev==='lobby')){fbReq(base+'/'+ev,'PUT',data).catch(e=>{LE=e.message});return}
+    if(HOST&&(ev==='snap'||ev==='lobby')){fbReq(base+'/'+ev,'PUT',data).catch(e=>{if(ev==='snap')LAST_SNAP_SENT='';LE=e.message});return}
     if(!HOST&&ev==='lob'){fbReq(base+'/players/'+MP,'PATCH',data).catch(e=>{LE=e.message});return}
     if(!HOST&&ev==='act'){let id='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);fbReq(base+'/messages/'+MP+'/'+id,'PUT',{ev,data,at:Date.now()}).catch(e=>{LE=e.message})}
    },close:()=>{stopped=true}};
