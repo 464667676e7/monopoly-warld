@@ -73,3 +73,11 @@ test('embedded JavaScript parses without syntax errors', () => {
   assert.ok(blocks.length > 0, 'inline scripts are found');
   for (const block of blocks) new vm.Script(block);
 });
+
+test('auction state is validated and reconstructable from the board', () => {
+  const auction = validFixture();
+  auction.au = { s: 3, n: 'Property', pr: 100, hi: 50, hb: 0, t: 2 };
+  assert.equal(security.validSnap(auction), true);
+  auction.au.s = 999;
+  assert.equal(security.validSnap(auction), false);
+});
