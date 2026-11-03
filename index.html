@@ -120,6 +120,7 @@ html{overflow:hidden}body{position:fixed;left:0;top:0;margin:0;width:var(--W,100
 .sl{width:clamp(130px,calc(var(--W,100vw)*.22),210px);min-height:200px;background:#fff9;border:4px solid #8a97a8;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center}.sl .tb2{font-size:clamp(34px,8vmin,56px);cursor:pointer}
 .cs{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}.cs b{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid #fff}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 const CL=['#e53935','#1e88e5','#2e9e4f','#f59a23','#8e44ad','#00acc1'],T4=['🎩','✈️','👟','🛹','⛵','🚗','🐕','🐈'];
 let ST={s:'home'},SL=[],G=0,RN=0,ONL=0,HOST=1,RM=null,MY=0,MP='',BT=0,TP=-1,NAME='שחקן',LOCW=0;
@@ -162,11 +163,16 @@ if(s.rn!=RN){RN=s.rn;d=s.d;roll(d)}else if(!s.bz){d=s.d;paint(d)}
 if(!(M&&M.loc)){let nextM=s.md?{h:cleanModalHTML(s.md.h),w:s.md.w,b:s.md.b.map(x=>[escText(x[0]),()=>{},!!x[1]])}:null;/* Keep the guest's active modal object stable across frequent Firebase snapshots. */if(!(ONL&&!HOST&&M&&nextM&&M.h===nextM.h))M=nextM;}
 G=1;ST=null;menu();render()}
 const FB_DB='https://monopoly-world-f758d-default-rtdb.europe-west1.firebasedatabase.app';
+const firebaseConfig={apiKey:"AIzaSyCt6fxi6rMQ3lSVWf61lACWisZ_p2i6PFQ",authDomain:"monopoly-world-f758d.firebaseapp.com",databaseURL:FB_DB,projectId:"monopoly-world-f758d",storageBucket:"monopoly-world-f758d.firebasestorage.app",messagingSenderId:"61899297576",appId:"1:61899297576:web:0608870fc072b1a45f361d"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const firebaseAuth=firebase.auth();
+let firebaseAuthReady=firebaseAuth.signInAnonymously().then(c=>c.user).catch(e=>{LE='Firebase Authentication: '+e.message;throw e});
+async function ensureFirebaseUser(){let u=await firebaseAuthReady;if(!u)throw Error('Firebase Anonymous Authentication לא הצליח');return u}
 const peerId=()=>{let k='mw_peer_id',v='';try{v=localStorage.getItem(k)||'';if(!/^p[a-z0-9]{8,40}$/.test(v)){v='p'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem(k,v)}}catch(e){v='p'+Math.random().toString(36).slice(2,12)+Date.now().toString(36)}return v};
-async function fbReq(path,method='GET',body){let r=await fetch(FB_DB+'/'+path+'.json',{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let t=await r.text();if(!r.ok)throw Error('Firebase '+r.status+': '+t);return t?JSON.parse(t):null}
+async function fbReq(path,method='GET',body){let u=await ensureFirebaseUser(),token=await u.getIdToken();let url=FB_DB+'/'+path+'.json?auth='+encodeURIComponent(token);let r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let t=await r.text();if(!r.ok)throw Error('Firebase '+r.status+': '+t);return t?JSON.parse(t):null}
 async function conn(c){
  try{
-  MP=peerId(); const base='rooms/mw'+c; const handlers={}; let stopped=false;
+  MP=(await ensureFirebaseUser()).uid; const base='rooms/mw'+c; const handlers={}; let stopped=false;
   const dispatch=(ev,m)=>{(handlers[ev]||[]).forEach(fn=>{try{fn(m)}catch(e){console.error(e)}})};
   if(HOST){let exists=await fbReq(base);if(exists)throw Error('קוד חדר תפוס. צור חדר חדש.');SL[0].peer=MP;await fbReq(base,'PUT',{createdAt:Date.now(),host:MP,status:'lobby',players:{[MP]:{n:safePlayerName(NAME),tk:SL[0].tk,col:SL[0].col,type:'me',peer:MP}}});}
   else {let room=await fbReq(base);if(!room||!room.host||room.status!=='lobby')throw Error('החדר לא נמצא או שהמשחק כבר התחיל.');let seats=room.lobby&&Array.isArray(room.lobby.sl)?room.lobby.sl.filter(Boolean).length:Object.keys(room.players||{}).length;if(seats>=4)throw Error('החדר מלא.');if(room.players&&room.players[MP])throw Error('מזהה שחקן כבר נמצא בחדר.');
