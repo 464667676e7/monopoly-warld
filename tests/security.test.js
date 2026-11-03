@@ -30,7 +30,7 @@ test('HTML text escaping blocks tag and attribute injection', () => {
 
 test('player-name escaping is idempotent for lobby round trips', () => {
   const first = security.safePlayerName('<script>alert(1)</script>');
-  const second = context.safePlayerName(first);
+  const second = security.safePlayerName(first);
   assert.equal(first, second);
   assert.ok(!first.includes('<script'));
 });
@@ -66,4 +66,10 @@ test('Firebase emit reports failed writes without retrying automatically', () =>
 test('room join code is validated as nine decimal digits', () => {
   assert.match(html, /if\(!\/\^\[0-9\]\{9\}\$\/\.test\(c\)\)/);
   assert.match(html, /maxlength=9/);
+});
+
+test('embedded JavaScript parses without syntax errors', () => {
+  const blocks = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)].map(x => x[1]).filter(x => x.trim());
+  assert.ok(blocks.length > 0, 'inline scripts are found');
+  for (const block of blocks) new vm.Script(block);
 });
