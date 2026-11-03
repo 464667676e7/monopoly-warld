@@ -71,7 +71,7 @@ test('room join code is validated as nine decimal digits', () => {
 test('embedded JavaScript parses without syntax errors', () => {
   const blocks = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x => x[1]).filter(x => x.trim());
   assert.ok(blocks.length > 0, 'inline scripts are found');
-  for (const block of blocks) new vm.Script(block);
+  for (const [idx, block] of blocks.entries()) { try { new vm.Script(block); } catch (e) { throw new Error(`script block ${idx+1}: ${e.message}`); } }
 });
 
 test('auction state is validated and reconstructable from the board', () => {
